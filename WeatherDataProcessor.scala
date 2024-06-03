@@ -93,14 +93,24 @@ object WeatherDataProcessor {
 
   def main(args: Array[String]): Unit = {
     val start = System.currentTimeMillis()
+
+    implicit val byteStringOrdering: Ordering[ByteString] = new Ordering[ByteString] {
+      override def compare(x: ByteString, y: ByteString): Int = {
+        val minLength = math.min(x.length, y.length)
+        var i = 0
+        while (i < minLength) {
+          val byteComparison = x(i) - y(i)
+          if (byteComparison != 0)
+            return byteComparison
+          i += 1
+        }
+        x.length - y.length 
+      }
+    }
+
     val unOrderedRes = mutable.HashMap[ByteString,Data]()
     val result = mutable.HashMap[String,Data]()
-    val path = "/Users/tung_ph/Downloads/1brc-main/data/measurements.txt"
-
-//    val file = new File(path)
-//    val inputStream = new FileInputStream(file)
-
-//    val source = StreamConverters.fromInputStream(() => inputStream)
+    val path = "C:\\Users\\Admin\\IdeaProjects\\untitled\\app\\resources\\weather_stations.csv"
     val source = FileIO.fromPath(Paths.get(path))
     val seperator = ';'.toByte
 
@@ -126,7 +136,7 @@ object WeatherDataProcessor {
       .runWith(Sink.ignore)
     stream.onComplete { _ =>
       unOrderedRes.keys.toSeq
-        .sortBy(s => s.head)
+        .sortBy(identity)
         .foreach(key => println(s"${key.utf8String} ${unOrderedRes(key)}"))
 
       val end = System.currentTimeMillis()
@@ -135,5 +145,4 @@ object WeatherDataProcessor {
     }
   }
 }
-
 
